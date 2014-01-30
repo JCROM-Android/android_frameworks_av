@@ -48,6 +48,10 @@
 #include "utils/CameraTraces.h"
 #include "CameraDeviceFactory.h"
 
+#define MY_CAMERA_SOUND_DIR "/data/theme/sounds/camera/"
+#define MY_CAMERA_SOUND_SHUTTER "/data/theme/sounds/camera/camera_click.ogg"
+#define MY_CAMERA_SOUND_RECORD "/data/theme/sounds/camera/VideoRecord.ogg"
+
 namespace android {
 
 // ----------------------------------------------------------------------------
@@ -913,6 +917,23 @@ void CameraService::loadSound() {
     if(!disableSound) {
         mSoundPlayer[SOUND_SHUTTER] = newMediaPlayer("/system/media/audio/ui/camera_click.ogg");
         mSoundPlayer[SOUND_RECORDING] = newMediaPlayer("/system/media/audio/ui/VideoRecord.ogg");
+
+        char property[PROPERTY_VALUE_MAX];
+
+        // JCROM
+        if (property_get("persist.sys.force.hobby", property, NULL) > 0) {
+            if (strcmp(property, "true") == 0) {
+                // WARNING this method "newMediaPlayer" doesn't return verify value...
+                mSoundPlayer[SOUND_SHUTTER] = newMediaPlayer(MY_CAMERA_SOUND_SHUTTER);
+                mSoundPlayer[SOUND_RECORDING] = newMediaPlayer(MY_CAMERA_SOUND_RECORD);            
+            } else {
+                mSoundPlayer[SOUND_SHUTTER] = newMediaPlayer("/system/media/audio/ui/camera_click.ogg");
+                mSoundPlayer[SOUND_RECORDING] = newMediaPlayer("/system/media/audio/ui/VideoRecord.ogg");
+            }
+        } else {
+            mSoundPlayer[SOUND_SHUTTER] = newMediaPlayer("/system/media/audio/ui/camera_click.ogg");
+            mSoundPlayer[SOUND_RECORDING] = newMediaPlayer("/system/media/audio/ui/VideoRecord.ogg");
+        }
     }
     else {
         mSoundPlayer[SOUND_SHUTTER] = NULL;
