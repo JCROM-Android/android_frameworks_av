@@ -218,12 +218,19 @@ void AnotherPacketSource::queueAccessUnit(const sp<ABuffer> &buffer) {
     }
 
     if (mLatestEnqueuedMeta == NULL) {
-        mLatestEnqueuedMeta = buffer->meta();
+        mLatestEnqueuedMeta = buffer->meta()->dup();
     } else {
         int64_t latestTimeUs = 0;
+        int64_t frameDeltaUs = 0;
         CHECK(mLatestEnqueuedMeta->findInt64("timeUs", &latestTimeUs));
         if (lastQueuedTimeUs > latestTimeUs) {
-            mLatestEnqueuedMeta = buffer->meta();
+            mLatestEnqueuedMeta = buffer->meta()->dup();
+            frameDeltaUs = lastQueuedTimeUs - latestTimeUs;
+            mLatestEnqueuedMeta->setInt64("durationUs", frameDeltaUs);
+        } else if (!mLatestEnqueuedMeta->findInt64("durationUs", &frameDeltaUs)) {
+            // For B frames
+            frameDeltaUs = latestTimeUs - lastQueuedTimeUs;
+            mLatestEnqueuedMeta->setInt64("durationUs", frameDeltaUs);
         }
     }
 }
@@ -273,6 +280,15 @@ void AnotherPacketSource::queueDiscontinuity(
 
     mBuffers.push_back(buffer);
     mCondition.signal();
+}
+
+void AnotherPacketSource::eraseBuffer() {
+    Mutex::Autolock autoLock(mLock);
+    List<sp<ABuffer> >::iterator it = mBuffers.begin();
+    it++;
+    while (it != mBuffers.end()) {
+        it = mBuffers.erase(it);
+    }
 }
 
 void AnotherPacketSource::signalEOS(status_t result) {
